@@ -1,0 +1,322 @@
+#include <iostream>
+using namespace std;
+
+class Queue
+{
+private:
+    int front, rear, capacity;
+    int* array;
+
+public:
+    Queue(int size)
+    {
+        capacity = size;
+        front = rear = -1;
+        array = new int[capacity];
+    }
+
+    ~Queue()
+    {
+        delete[] array;
+    }
+
+    bool isEmpty()
+    {
+        return front == -1;
+    }
+
+    bool isFull()
+    {
+        return (rear + 1) % capacity == front;
+    }
+
+    void enqueue(int item)
+    {
+        if (isFull())
+        {
+            cout << "Queue is full. Cannot enqueue.\n";
+            return;
+        }
+
+        rear = (rear + 1) % capacity;
+        array[rear] = item;
+
+        if (front == -1)
+            front = rear;
+    }
+
+    int dequeue()
+    {
+        if (isEmpty())
+        {
+            cout << "Queue is empty. Cannot dequeue.\n";
+            return -1; // Assuming -1 represents an empty value
+        }
+
+        int item = array[front];
+
+        if (front == rear)
+            front = rear = -1;
+        else
+            front = (front + 1) % capacity;
+
+        return item;
+    }
+};
+
+class City
+{
+public:
+    int** by_road;
+    int** by_air;
+    int total_by_road;
+    int total_by_air;
+
+    City()
+    {
+        total_by_road = 0;
+        total_by_air = 0;
+        by_road = nullptr;
+        by_air = nullptr;
+    }
+
+    ~City()
+    {
+        for (int i = 0; i < total_by_road; ++i)
+            delete[] by_road[i];
+        delete[] by_road;
+
+        for (int i = 0; i < total_by_air; ++i)
+            delete[] by_air[i];
+        delete[] by_air;
+    }
+
+
+    void initializeArrays(int roadSize, int airSize)
+    {
+        by_road = new int*[roadSize];
+        for (int i = 0; i < roadSize; ++i)
+            by_road[i] = new int[2];
+
+        by_air = new int*[airSize];
+        for (int i = 0; i < airSize; ++i)
+            by_air[i] = new int[2];
+    }
+};
+
+class Graph
+{
+    City* cities;
+    int total_cities;
+
+public:
+    Graph(int val_total_cities)
+    {
+        total_cities = val_total_cities;
+        cities = new City[total_cities];
+
+        for (int j = 0; j < total_cities; j++)
+        {
+            int roadSize = total_cities - 1;
+            int airSize = total_cities;
+            cities[j].initializeArrays(roadSize, airSize);
+        }
+    }
+
+    ~Graph()
+    {
+        delete[] cities;
+    }
+
+    void by_road_route(int start, int destination)
+    {
+        cities[start].by_road[cities[start].total_by_road][0] = destination;
+        cities[start].by_road[cities[start].total_by_road][1] = 1; // Assuming weight is 1 for road routes
+        cities[start].total_by_road++;
+    }
+
+    void by_air_route(int start, int destination)
+    {
+        cities[start].by_air[cities[start].total_by_air][0] = destination;
+        cities[start].by_air[cities[start].total_by_air][1] = 1; // Assuming weight is 1 for air routes
+        cities[start].total_by_air++;
+    }
+
+    int* bfs_shortest_path(int start, int end, int& path_length)
+    {
+        int* distance = new int[total_cities];
+        int* parent = new int[total_cities];
+        bool* visited = new bool[total_cities]{false};
+
+        Queue q(total_cities);
+        q.enqueue(start);
+        visited[start] = true;
+        distance[start] = 0;
+
+        while (!q.isEmpty())
+        {
+            int current = q.dequeue();
+
+            // Consider road routes
+            for (int i = 0; i < cities[current].total_by_road; ++i)
+            {
+                int neighbor = cities[current].by_road[i][0];
+                if (!visited[neighbor])
+                {
+                    q.enqueue(neighbor);
+                    visited[neighbor] = true;
+                    distance[neighbor] = distance[current] + cities[current].by_road[i][1];
+                    parent[neighbor] = current;
+                }
+            }
+
+            // Consider air routes
+            for (int i = 0; i < cities[current].total_by_air; ++i)
+            {
+                int neighbor = cities[current].by_air[i][0];
+                if (!visited[neighbor])
+                {
+                    q.enqueue(neighbor);
+                    visited[neighbor] = true;
+                    distance[neighbor] = distance[current] + cities[current].by_air[i][1];
+                    parent[neighbor] = current;
+                }
+            }
+        }
+
+        // Reconstruct the shortest path
+        int* shortest_path = new int[total_cities];
+        int current = end;
+        path_length = 0;
+
+        while (current != start)
+        {
+            shortest_path[path_length++] = current;
+            current = parent[current];
+        }
+        shortest_path[path_length++] = start;
+
+        // Reverse the array to get the correct order
+        for (int i = 0, j = path_length - 1; i < j; ++i, --j)
+        {
+            int temp = shortest_path[i];
+            shortest_path[i] = shortest_path[j];
+            shortest_path[j] = temp;
+        }
+
+        // Clean up memory
+        delete[] distance;
+        delete[] parent;
+        delete[] visited;
+
+        // Return the shortest path
+        return shortest_path;
+    }
+
+    void cal_distance(int* shortest_path,int path_length)
+    {
+        int i,j;
+        int cities;
+        int num_days=0;
+        for(i=0,j=0;i<total_cities;i++,j++)
+        {
+            if(i==shortest_path[j])
+            {
+                if(cities<6 && cities==total_cities)
+                {
+                    num_days++;
+                }
+                else if(cities<6)
+                {
+                    cities++;
+                }
+                else
+                {
+                    cities=0;
+                    num_days++;
+                }
+            }
+            else
+            {
+                num_days++;
+                i=shortest_path[j];
+                cities=0;
+            }
+        }
+
+        cout<<num_days;
+    }
+
+    void display()
+    {
+        for (int i = 0; i < total_cities; i++)
+        {
+            cout << "City " << i << " :\n";
+            cout << "By road : ";
+            for (int j = 0; j < cities[i].total_by_road; j++)
+            {
+                cout << cities[i].by_road[j][0] << " ";
+            }
+            cout << "\nBy air : ";
+            for (int j = 0; j < cities[i].total_by_air; j++)
+            {
+                cout << cities[i].by_air[j][0] << " ";
+            }
+            cout << "\n\n";
+        }
+    }
+
+};
+
+int main()
+{
+    int cases;
+    cout << "Enter the number of test cases: ";
+    cin >> cases;
+
+    for (int i = 0; i < cases; i++)
+    {
+        int total_cities, numAirRoutes;
+        cout << "Enter the number of cities: ";
+        cin >> total_cities;
+        cout << "Enter the number of aerial routes: ";
+        cin >> numAirRoutes;
+
+        Graph travelGraph(total_cities);
+
+        for (int j = 0; j < total_cities - 1; j++)
+        {
+            travelGraph.by_road_route(j, j + 1);
+        }
+
+        cout << "Enter the starting and ending point of by air route: \n";
+        for (int j = 0; j < numAirRoutes; j++)
+        {
+            int start, destination;
+            cin >> start;
+            cin >> destination;
+            travelGraph.by_air_route(start, destination);
+        }
+
+        // Example: Assuming start and end nodes for shortest path
+        int start_node = 0;
+        int end_node = total_cities - 1;
+         int path_length;
+    int* shortestPath = travelGraph.bfs_shortest_path(start_node, end_node, path_length);
+
+    // Display or process the shortest path as needed
+    cout << "Shortest Path: ";
+    for (int i = 0; i < path_length; ++i)
+    {
+        cout << shortestPath[i] << " ";
+    }
+    cout << endl;
+
+    travelGraph.cal_distance(shortestPath,path_length);
+
+
+
+    }
+
+    return 0;
+}
